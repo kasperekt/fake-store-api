@@ -25,35 +25,7 @@ The easiest way to set up the database is using Docker and the provided docker-c
    ```
    This will start MongoDB in a container and create a volume for persistent data storage.
 
-3. **Verify the MongoDB container is running**
-   ```bash
-   docker ps
-   ```
-   You should see a MongoDB container running.
-
-## Configuring the Application
-
-1. **Set up environment variables**
-   Make sure your `.env` file contains the correct MongoDB connection string:
-
-   ```
-   DATABASE_URL=mongodb://localhost:27017/fake_store_db
-   PORT=8765
-   ```
-
-   Adjust the connection string if you're using a different MongoDB setup.
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Start the application**
-   ```bash
-   npm start
-   ```
-
-4. **Populate the database**
+3. **Populate the database**
    Run the provided script to populate the database with sample data:
    ```bash
    chmod +x populate_store.sh
