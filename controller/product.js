@@ -1,11 +1,11 @@
-const Product = require('../model/product');
+const Product = require("../model/product");
 
 module.exports.getAllProducts = (req, res) => {
 	const limit = Number(req.query.limit) || 0;
-	const sort = req.query.sort == 'desc' ? -1 : 1;
+	const sort = req.query.sort == "desc" ? -1 : 1;
 
 	Product.find()
-		.select(['-_id'])
+		.select(["-_id"])
 		.limit(limit)
 		.sort({ id: sort })
 		.then((products) => {
@@ -20,7 +20,7 @@ module.exports.getProduct = (req, res) => {
 	Product.findOne({
 		id,
 	})
-		.select(['-_id'])
+		.select(["-_id"])
 		.then((product) => {
 			res.json(product);
 		})
@@ -28,7 +28,7 @@ module.exports.getProduct = (req, res) => {
 };
 
 module.exports.getProductCategories = (req, res) => {
-	Product.distinct('category')
+	Product.distinct("category")
 		.then((categories) => {
 			res.json(categories);
 		})
@@ -38,12 +38,12 @@ module.exports.getProductCategories = (req, res) => {
 module.exports.getProductsInCategory = (req, res) => {
 	const category = req.params.category;
 	const limit = Number(req.query.limit) || 0;
-	const sort = req.query.sort == 'desc' ? -1 : 1;
+	const sort = req.query.sort == "desc" ? -1 : 1;
 
 	Product.find({
 		category,
 	})
-		.select(['-_id'])
+		.select(["-_id"])
 		.limit(limit)
 		.sort({ id: sort })
 		.then((products) => {
@@ -55,37 +55,42 @@ module.exports.getProductsInCategory = (req, res) => {
 module.exports.addProduct = (req, res) => {
 	if (typeof req.body == undefined) {
 		res.json({
-			status: 'error',
-			message: 'data is undefined',
+			status: "error",
+			message: "data is undefined",
 		});
 	} else {
-		// let productCount = 0;
-		// Product.find()
-		//   .countDocuments(function (err, count) {
-		//     productCount = count;
-		//   })
-		//   .then(() => {
-		const product = {
-			id: 21,
+		// Create a new Product instance with the data from the request
+		const product = new Product({
+			id: req.body.id || Math.floor(Math.random() * 1000), // Use provided ID or generate a random one
 			title: req.body.title,
 			price: req.body.price,
 			description: req.body.description,
 			image: req.body.image,
 			category: req.body.category,
-		};
-		// product.save()
-		//   .then(product => res.json(product))
-		//   .catch(err => console.log(err))
-		res.json(product);
-		// });
+		});
+
+		// Save the product to the database
+		product
+			.save()
+			.then((savedProduct) => {
+				res.status(201).json(savedProduct);
+			})
+			.catch((err) => {
+				console.log(err);
+				res.status(500).json({
+					status: "error",
+					message: "Failed to save product",
+					error: err.message,
+				});
+			});
 	}
 };
 
 module.exports.editProduct = (req, res) => {
 	if (typeof req.body == undefined || req.params.id == null) {
 		res.json({
-			status: 'error',
-			message: 'something went wrong! check your sent data',
+			status: "error",
+			message: "something went wrong! check your sent data",
 		});
 	} else {
 		res.json({
@@ -102,14 +107,14 @@ module.exports.editProduct = (req, res) => {
 module.exports.deleteProduct = (req, res) => {
 	if (req.params.id == null) {
 		res.json({
-			status: 'error',
-			message: 'cart id should be provided',
+			status: "error",
+			message: "cart id should be provided",
 		});
 	} else {
 		Product.findOne({
 			id: req.params.id,
 		})
-			.select(['-_id'])
+			.select(["-_id"])
 			.then((product) => {
 				res.json(product);
 			})
