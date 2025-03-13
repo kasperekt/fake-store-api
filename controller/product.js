@@ -22,9 +22,21 @@ module.exports.getProduct = (req, res) => {
 	})
 		.select(["-_id"])
 		.then((product) => {
+			if (!product) {
+				return res.status(404).json({
+					status: "error",
+					message: "Product not found"
+				});
+			}
 			res.json(product);
 		})
-		.catch((err) => console.log(err));
+		.catch((err) => {
+			console.log(err);
+			res.status(500).json({
+				status: "error",
+				message: "Server error"
+			});
+		});
 };
 
 module.exports.getProductCategories = (req, res) => {
@@ -105,35 +117,43 @@ module.exports.editProduct = (req, res) => {
 };
 
 module.exports.deleteProduct = (req, res) => {
-	if (req.params.id == null) {
-		res.json({
+	const id = req.params.id;
+	console.log(`Attempting to delete product with ID: ${id}`);
+
+	if (!id) {
+		console.log('Delete request received with no ID');
+		return res.status(400).json({
 			status: "error",
-			message: "product id should be provided",
+			message: "Product ID must be provided"
 		});
-	} else {
-		Product.findOneAndDelete({
-			id: req.params.id,
-		})
-			.then((deletedProduct) => {
-				if (deletedProduct) {
-					res.json({
-						status: "success",
-						message: "Product deleted successfully",
-					});
-				} else {
-					res.status(404).json({
-						status: "error",
-						message: "Product not found",
-					});
-				}
-			})
-			.catch((err) => {
-				console.log(err);
-				res.status(500).json({
-					status: "error",
-					message: "Failed to delete product",
-					error: err.message,
-				});
-			});
 	}
+
+	Product.findOneAndDelete({ id: Number(id) })  // Convert id to Number since it's stored as Number in schema
+		.then((deletedProduct) => {
+			if (deletedProduct) {
+				console.log(`Successfully deleted product: ${JSON.stringify(deletedProduct)}`);
+				res.status(200).json({
+					status: "success",
+					message: "Product deleted successfully",
+					deletedProduct: {
+						id: deletedProduct.id,
+						title: deletedProduct.title
+					}
+				});
+			} else {
+				console.log(`No product found with ID: ${id}`);
+				res.status(404).json({
+					status: "error",
+					message: "Product not found"
+				});
+			}
+		})
+		.catch((err) => {
+			console.error(`Error deleting product with ID ${id}:`, err);
+			res.status(500).json({
+				status: "error",
+				message: "Failed to delete product",
+				error: err.message
+			});
+		});
 };

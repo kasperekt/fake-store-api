@@ -76,10 +76,27 @@ describe("Testing products API", () => {
 
 
     it('delete a product', async () => {
-        const response = await supertest(app).put('/products/1')
-        expect(response.status).toBe(200)
-        console.log('delete', response.body)
-        expect(response.body).toHaveProperty('id')
+        // First create a product to delete
+        const createResponse = await supertest(app).post('/products').send({
+            title: 'Test Product To Delete',
+            price: 99.99,
+            description: 'This product will be deleted',
+            image: 'test-image.jpg',
+            category: 'test'
+        });
+        
+        const productId = createResponse.body.id;
+        console.log('Created product for deletion test:', productId);
+
+        // Then delete it
+        const deleteResponse = await supertest(app).delete(`/products/${productId}`);
+        expect(deleteResponse.status).toBe(200);
+        console.log('Delete response:', deleteResponse.body);
+        expect(deleteResponse.body.status).toBe('success');
+        
+        // Verify it's gone
+        const verifyResponse = await supertest(app).get(`/products/${productId}`);
+        expect(verifyResponse.status).toBe(404);
     })
 
 })

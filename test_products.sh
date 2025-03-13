@@ -74,12 +74,63 @@ count_products() {
     fi
 }
 
+# Function to test product removal
+test_product_removal() {
+    local id=$1
+    echo -e "Testing removal of product ID $id..."
+    
+    # First verify the product exists
+    response=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/products/$id")
+    status_code=$(echo "$response" | tail -n1)
+    
+    if [ "$status_code" -ne 200 ]; then
+        echo -e "${RED}✗ Cannot test removal - product $id doesn't exist${NC}"
+        return 1
+    fi
+    
+    # Try to delete the product
+    response=$(curl -s -w "\n%{http_code}" -X DELETE "$BASE_URL/products/$id")
+    status_code=$(echo "$response" | tail -n1)
+    
+    if [ "$status_code" -eq 200 ]; then
+        # Verify product is actually gone
+        verify_response=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/products/$id")
+        verify_status=$(echo "$verify_response" | tail -n1)
+        
+        if [ "$verify_status" -eq 404 ]; then
+            echo -e "${GREEN}✓ Product $id was successfully removed${NC}"
+            return 0
+        else
+            echo -e "${RED}✗ Product $id still exists after deletion${NC}"
+            return 1
+        fi
+    else
+        echo -e "${RED}✗ Failed to remove product $id. Status code: $status_code${NC}"
+        return 1
+    fi
+}
+
 # Main execution
 check_server
 
-# Test specific products
-test_product 1 "Laptop Pro X"
-test_product 2 "Classic Denim Jacket"
+# First get all products and find an existing one to test with
+echo -e "Getting list of products to find one for testing..."
+response=$(curl -s -X GET "$BASE_URL/products")
+first_product_id=$(echo "$response" | grep -o '"id":[0-9]*' | head -n1 | cut -d':' -f2)
+first_product_title=$(echo "$response" | grep -o '"title":"[^"]*"' | head -n1 | cut -d'"' -f4)
+
+if [ -z "$first_product_id" ]; then
+    echo -e "${RED}No products found in the store to test with${NC}"
+    exit 1
+fi
+
+echo -e "${YELLOW}Found product ID $first_product_id with title: $first_product_title${NC}"
+
+# Test the existing product
+test_product "$first_product_id" "$first_product_title"
+
+# Test product removal with the product we know exists
+test_product_removal "$first_product_id"
 
 # Count total products
 count_products
