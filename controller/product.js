@@ -108,16 +108,32 @@ module.exports.deleteProduct = (req, res) => {
 	if (req.params.id == null) {
 		res.json({
 			status: "error",
-			message: "cart id should be provided",
+			message: "product id should be provided",
 		});
 	} else {
-		Product.findOne({
+		Product.findOneAndDelete({
 			id: req.params.id,
 		})
-			.select(["-_id"])
-			.then((product) => {
-				res.json(product);
+			.then((deletedProduct) => {
+				if (deletedProduct) {
+					res.json({
+						status: "success",
+						message: "Product deleted successfully",
+					});
+				} else {
+					res.status(404).json({
+						status: "error",
+						message: "Product not found",
+					});
+				}
 			})
-			.catch((err) => console.log(err));
+			.catch((err) => {
+				console.log(err);
+				res.status(500).json({
+					status: "error",
+					message: "Failed to delete product",
+					error: err.message,
+				});
+			});
 	}
 };
