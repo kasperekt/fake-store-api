@@ -110,6 +110,52 @@ test_product_removal() {
     fi
 }
 
+# Function to test product update
+test_product_update() {
+    local id=$1
+    local new_title="Updated Product Title"
+    local new_price=199.99
+    echo -e "Testing update of product ID $id..."
+    
+    # First verify the product exists
+    response=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/products/$id")
+    status_code=$(echo "$response" | tail -n1)
+    
+    if [ "$status_code" -ne 200 ]; then
+        echo -e "${RED}✗ Cannot test update - product $id doesn't exist${NC}"
+        return 1
+    fi
+    
+    # Try to update the product
+    response=$(curl -s -w "\n%{http_code}" -X PUT "$BASE_URL/products/$id" \
+        -H "Content-Type: application/json" \
+        -d "{
+            \"title\": \"$new_title\",
+            \"price\": $new_price,
+            \"description\": \"Updated test description\",
+            \"image\": \"https://example.com/updated-image.jpg\",
+            \"category\": \"test\"
+        }")
+    status_code=$(echo "$response" | tail -n1)
+    response_body=$(echo "$response" | sed '$d')
+    
+    if [ "$status_code" -eq 200 ]; then
+        # Verify the update was successful by checking the returned data
+        updated_title=$(echo "$response_body" | grep -o '"title":"[^"]*"' | cut -d'"' -f4)
+        if [[ "$updated_title" == "$new_title" ]]; then
+            echo -e "${GREEN}✓ Product $id was successfully updated with new title: $updated_title${NC}"
+            return 0
+        else
+            echo -e "${RED}✗ Product update failed - title mismatch: $updated_title (expected: $new_title)${NC}"
+            return 1
+        fi
+    else
+        echo -e "${RED}✗ Failed to update product $id. Status code: $status_code${NC}"
+        echo "Response: $response_body"
+        return 1
+    fi
+}
+
 # Main execution
 check_server
 
@@ -128,6 +174,9 @@ echo -e "${YELLOW}Found product ID $first_product_id with title: $first_product_
 
 # Test the existing product
 test_product "$first_product_id" "$first_product_title"
+
+# Test product update
+test_product_update "$first_product_id"
 
 # Test product removal with the product we know exists
 test_product_removal "$first_product_id"

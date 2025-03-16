@@ -105,14 +105,40 @@ module.exports.editProduct = (req, res) => {
 			message: "something went wrong! check your sent data",
 		});
 	} else {
-		res.json({
-			id: parseInt(req.params.id),
+		const id = parseInt(req.params.id);
+		
+		// Create an object with the updated fields
+		const updatedProduct = {
 			title: req.body.title,
 			price: req.body.price,
 			description: req.body.description,
 			image: req.body.image,
 			category: req.body.category,
-		});
+		};
+		
+		// Find the product by id and update it
+		Product.findOneAndUpdate(
+			{ id: id },
+			updatedProduct,
+			{ new: true, runValidators: true }
+		)
+			.then((product) => {
+				if (!product) {
+					return res.status(404).json({
+						status: "error",
+						message: "Product not found",
+					});
+				}
+				res.status(200).json(product);
+			})
+			.catch((err) => {
+				console.log(err);
+				res.status(500).json({
+					status: "error",
+					message: "Failed to update product",
+					error: err.message,
+				});
+			});
 	}
 };
 
