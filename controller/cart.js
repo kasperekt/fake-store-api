@@ -85,27 +85,65 @@ module.exports.editCart = (req, res) => {
 			message: "something went wrong! check your sent data",
 		});
 	} else {
-		res.json({
-			id: parseInt(req.params.id),
-			userId: req.body.userId,
-			date: req.body.date,
-			products: req.body.products,
+		// Currently just returns the request data without updating the database
+		// Should be updated to actually modify the cart
+		Cart.findOneAndUpdate(
+			{ id: parseInt(req.params.id) },
+			{
+				userId: req.body.userId,
+				date: req.body.date,
+				products: req.body.products
+			},
+			{ new: true, runValidators: true }
+		)
+		.then(updatedCart => {
+			if (!updatedCart) {
+				return res.status(404).json({
+					status: "error",
+					message: "Cart not found"
+				});
+			}
+			res.json(updatedCart);
+		})
+		.catch(err => {
+			console.log(err);
+			res.status(500).json({
+				status: "error",
+				message: "Failed to update cart",
+				error: err.message
+			});
 		});
 	}
 };
 
 module.exports.deleteCart = (req, res) => {
 	if (req.params.id == null) {
-		res.json({
+		return res.status(400).json({
 			status: "error",
 			message: "cart id should be provided",
 		});
-	} else {
-		Cart.findOne({ id: req.params.id })
-			.select("-_id -products._id")
-			.then((cart) => {
-				res.json(cart);
-			})
-			.catch((err) => console.log(err));
 	}
+	
+	Cart.findOneAndDelete({ id: parseInt(req.params.id) })
+		.then((deletedCart) => {
+			if (!deletedCart) {
+				return res.status(404).json({
+					status: "error",
+					message: "Cart not found"
+				});
+			}
+			res.json({
+				status: "success",
+				message: "Cart deleted successfully",
+				deletedCart
+			});
+		})
+		.catch((err) => {
+			console.log(err);
+			res.status(500).json({
+				status: "error",
+				message: "Failed to delete cart",
+				error: err.message
+			});
+		});
 };
