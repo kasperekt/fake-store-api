@@ -43,8 +43,23 @@ module.exports.getSingleCart = (req, res) => {
 		id,
 	})
 		.select("-_id -products._id")
-		.then((cart) => res.json(cart))
-		.catch((err) => console.log(err));
+		.then((cart) => {
+			if (!cart) {
+				return res.status(404).json({
+					status: "error",
+					message: "Cart not found"
+				});
+			}
+			res.status(200).json(cart);
+		})
+		.catch((err) => {
+			console.log(err);
+			res.status(500).json({
+				status: "error",
+				message: "Failed to retrieve cart",
+				error: err.message
+			});
+		});
 };
 
 module.exports.addCart = (req, res) => {
