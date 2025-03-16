@@ -19,14 +19,25 @@ module.exports.getAllUser = (req, res) => {
 module.exports.getUser = (req, res) => {
 	const id = req.params.id;
 
-	User.findOne({
-		id,
-	})
+	User.findOne({ id })
 		.select(["-_id"])
 		.then((user) => {
+			if (!user) {
+				return res.status(404).json({
+					status: "error",
+					message: "User not found"
+				});
+			}
 			res.json(user);
 		})
-		.catch((err) => console.log(err));
+		.catch((err) => {
+			console.log(err);
+			res.status(500).json({
+				status: "error",
+				message: "Server error",
+				error: err.message
+			});
+		});
 };
 
 module.exports.addUser = (req, res) => {
@@ -132,16 +143,32 @@ module.exports.editUser = (req, res) => {
 
 module.exports.deleteUser = (req, res) => {
 	if (req.params.id == null) {
-		res.json({
+		return res.status(400).json({
 			status: "error",
-			message: "cart id should be provided",
+			message: "User ID must be provided",
 		});
-	} else {
-		User.findOne({ id: req.params.id })
-			.select(["-_id"])
-			.then((user) => {
-				res.json(user);
-			})
-			.catch((err) => console.log(err));
 	}
+
+	User.findOneAndDelete({ id: parseInt(req.params.id) })
+		.then((deletedUser) => {
+			if (!deletedUser) {
+				return res.status(404).json({
+					status: "error",
+					message: "User not found"
+				});
+			}
+			res.json({
+				status: "success",
+				message: "User deleted successfully",
+				deletedUser
+			});
+		})
+		.catch((err) => {
+			console.log(err);
+			res.status(500).json({
+				status: "error",
+				message: "Failed to delete user",
+				error: err.message
+			});
+		});
 };
