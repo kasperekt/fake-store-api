@@ -18,6 +18,7 @@ const cartSchema = new schema({
 		required: true,
 	},
 	products: [
+		
 		{
 			productId: {
 				type: schema.Types.Number,

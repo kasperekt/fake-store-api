@@ -156,34 +156,215 @@ test_product_update() {
     fi
 }
 
+# New function to test user creation
+test_user_creation() {
+    echo -e "Testing user creation..."
+    
+    response=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/users" \
+        -H "Content-Type: application/json" \
+        -d '{
+            "email": "test@example.com",
+            "username": "testuser",
+            "password": "test123",
+            "firstname": "Test",
+            "lastname": "User",
+            "city": "Test City",
+            "street": "123 Test St",
+            "number": 42,
+            "zipcode": "12345",
+            "phone": "1-234-567-8900"
+        }')
+    
+    status_code=$(echo "$response" | tail -n1)
+    response_body=$(echo "$response" | sed '$d')
+    
+    if [ "$status_code" -eq 201 ]; then
+        # Extract the user id from response and check if it's not empty
+        user_id=$(echo "$response_body" | grep -o '"id":[0-9]*' | head -n1 | cut -d':' -f2)
+        if [ -n "$user_id" ]; then  # Check if user_id is not empty
+            echo -e "${GREEN}✓ User created successfully with ID: $user_id${NC}"
+            echo "$user_id"  # Return the ID for later use
+            return 0
+        else
+            echo -e "${RED}✗ Failed to extract user ID from response${NC}"
+            return 1
+        fi
+    else
+        echo -e "${RED}✗ Failed to create user. Status code: $status_code${NC}"
+        echo "Response: $response_body"
+        return 1
+    fi
+}
+
+# Function to test getting user data
+test_get_user() {
+    local id=$1
+    echo -e "Testing get user ID $id..."
+    
+    response=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/users/$id")
+    status_code=$(echo "$response" | tail -n1)
+    response_body=$(echo "$response" | sed '$d')
+    
+    if [ "$status_code" -eq 200 ]; then
+        username=$(echo "$response_body" | grep -o '"username":"[^"]*"' | cut -d'"' -f4)
+        if [ -n "$username" ]; then  # Check if username is not empty
+            echo -e "${GREEN}✓ Successfully retrieved user $id with username: $username${NC}"
+            return 0
+        else
+            echo -e "${RED}✗ Failed to extract username from response${NC}"
+            return 1
+        fi
+    else
+        echo -e "${RED}✗ Failed to retrieve user $id. Status code: $status_code${NC}"
+        echo "Response: $response_body"
+        return 1
+    fi
+}
+
+# Function to test user update - modify the request body to include password
+test_user_update() {
+    local id=$1
+    echo -e "Testing update of user ID $id..."
+    
+    response=$(curl -s -w "\n%{http_code}" -X PUT "$BASE_URL/users/$id" \
+        -H "Content-Type: application/json" \
+        -d '{
+            "email": "updated@example.com",
+            "username": "updateduser",
+            "password": "updatedpass123",
+            "firstname": "Updated",
+            "lastname": "User",
+            "city": "Updated City",
+            "street": "456 Updated St",
+            "number": 43,
+            "zipcode": "54321",
+            "phone": "1-234-567-8901"
+        }')
+    
+    status_code=$(echo "$response" | tail -n1)
+    response_body=$(echo "$response" | sed '$d')
+    
+    if [ "$status_code" -eq 200 ]; then
+        username=$(echo "$response_body" | grep -o '"username":"[^"]*"' | cut -d'"' -f4)
+        if [ -n "$username" ]; then
+            if [[ "$username" == "updateduser" ]]; then
+                echo -e "${GREEN}✓ User $id was successfully updated${NC}"
+                return 0
+            else
+                echo -e "${RED}✗ User update failed - username mismatch${NC}"
+                return 1
+            fi
+        else
+            echo -e "${RED}✗ Failed to extract username from response${NC}"
+            return 1
+        fi
+    else
+        echo -e "${RED}✗ Failed to update user $id. Status code: $status_code${NC}"
+        echo "Response: $response_body"
+        return 1
+    fi
+}
+
+# Function to test user deletion
+test_user_deletion() {
+    local id=$1
+    echo -e "Testing deletion of user ID $id..."
+    
+    response=$(curl -s -w "\n%{http_code}" -X DELETE "$BASE_URL/users/$id")
+    status_code=$(echo "$response" | tail -n1)
+    response_body=$(echo "$response" | sed '$d')
+    
+    if [ "$status_code" -eq 200 ]; then
+        echo -e "${GREEN}✓ Delete request successful${NC}"
+        echo "Response: $response_body"
+        return 0
+    else
+        echo -e "${RED}✗ Failed to delete user $id. Status code: $status_code${NC}"
+        echo "Response: $response_body"
+        return 1
+    fi
+}
+
+# Add new function to create a test product
+test_product_creation() {
+    echo -e "Creating a test product..."
+    
+    response=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/products" \
+        -H "Content-Type: application/json" \
+        -d '{
+            "title": "Test Product",
+            "price": 99.99,
+            "description": "A test product for API testing",
+            "image": "https://example.com/test-image.jpg",
+            "category": "test"
+        }')
+    
+    status_code=$(echo "$response" | tail -n1)
+    response_body=$(echo "$response" | sed '$d')
+    
+    if [ "$status_code" -eq 201 ]; then
+        # Extract the product id from response
+        product_id=$(echo "$response_body" | grep -o '"id":[0-9]*' | head -n1 | cut -d':' -f2)
+        if [ -n "$product_id" ]; then
+            echo -e "${GREEN}✓ Product created successfully with ID: $product_id${NC}"
+            echo "$product_id"  # Return the ID for later use
+            return 0
+        else
+            echo -e "${RED}✗ Failed to extract product ID from response${NC}"
+            return 1
+        fi
+    else
+        echo -e "${RED}✗ Failed to create product. Status code: $status_code${NC}"
+        echo "Response: $response_body"
+        return 1
+    fi
+}
+
 # Main execution
 check_server
 
-# First get all products and find an existing one to test with
-echo -e "Getting list of products to find one for testing..."
-response=$(curl -s -X GET "$BASE_URL/products")
-first_product_id=$(echo "$response" | grep -o '"id":[0-9]*' | head -n1 | cut -d':' -f2)
-first_product_title=$(echo "$response" | grep -o '"title":"[^"]*"' | head -n1 | cut -d'"' -f4)
+echo -e "\n${YELLOW}Testing Product API...${NC}"
 
-if [ -z "$first_product_id" ]; then
-    echo -e "${RED}No products found in the store to test with${NC}"
-    exit 1
+# Create a test product first
+echo -e "Creating test product..."
+product_creation_output=$(test_product_creation)
+first_product_id=$(echo "$product_creation_output" | grep -o '[0-9]*$')
+
+if [ -n "$first_product_id" ] && [[ "$first_product_id" =~ ^[0-9]+$ ]]; then
+    # Test the created product
+    test_product "$first_product_id" "Test Product"
+    
+    # Test product update
+    test_product_update "$first_product_id"
+    
+    # Test product removal
+    test_product_removal "$first_product_id"
+    
+    # Count total products
+    count_products
+else
+    echo -e "${RED}Failed to create test product, skipping product tests${NC}"
 fi
 
-echo -e "${YELLOW}Found product ID $first_product_id with title: $first_product_title${NC}"
+# Continue with user tests...
+echo -e "\n${YELLOW}Testing User API...${NC}"
+# Create and test a new user
+user_creation_output=$(test_user_creation)
+user_id=$(echo "$user_creation_output" | grep -o '[0-9]*$')
 
-# Test the existing product
-test_product "$first_product_id" "$first_product_title"
-
-# Test product update
-test_product_update "$first_product_id"
-
-# Test product removal with the product we know exists
-test_product_removal "$first_product_id"
-
-# Count total products
-count_products
+if [ -n "$user_id" ] && [[ "$user_id" =~ ^[0-9]+$ ]]; then
+    # Test getting user data
+    test_get_user "$user_id"
+    
+    # Test updating user data
+    test_user_update "$user_id"
+    
+    # Test user deletion
+    test_user_deletion "$user_id"
+else
+    echo -e "${RED}Skipping user tests due to creation failure${NC}"
+fi
 
 echo -e "\n${YELLOW}Summary:${NC}"
-echo -e "If you see green checkmarks above, the products were successfully added to the store."
-echo -e "If you see red error messages, there might be issues with the product creation or retrieval."
+echo -e "If you see green checkmarks above, all operations were successful."
+echo -e "If you see red error messages, there might be issues with the API endpoints."

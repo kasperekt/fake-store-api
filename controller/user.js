@@ -84,27 +84,49 @@ module.exports.editUser = (req, res) => {
 			message: "something went wrong! check your sent data",
 		});
 	} else {
-		res.json({
-			id: parseInt(req.params.id),
+		const updateData = {
 			email: req.body.email,
 			username: req.body.username,
 			password: req.body.password,
 			name: {
-				firstname: req.body.firstname,
-				lastname: req.body.lastname,
+				firstname: req.body.name?.firstname || req.body.firstname,
+				lastname: req.body.name?.lastname || req.body.lastname,
 			},
 			address: {
-				city: req.body.address.city,
-				street: req.body.address.street,
-				number: req.body.number,
-				zipcode: req.body.zipcode,
+				city: req.body.address?.city,
+				street: req.body.address?.street,
+				number: req.body.address?.number || req.body.number,
+				zipcode: req.body.address?.zipcode || req.body.zipcode,
 				geolocation: {
-					lat: req.body.address.geolocation.lat,
-					long: req.body.address.geolocation.long,
+					lat: req.body.address?.geolocation?.lat || "",
+					long: req.body.address?.geolocation?.long || "",
 				},
 			},
 			phone: req.body.phone,
-		});
+		};
+
+		User.findOneAndUpdate(
+			{ id: parseInt(req.params.id) },
+			updateData,
+			{ new: true, runValidators: true }
+		)
+			.then((updatedUser) => {
+				if (!updatedUser) {
+					return res.status(404).json({
+						status: "error",
+						message: "User not found",
+					});
+				}
+				res.json(updatedUser);
+			})
+			.catch((err) => {
+				console.log(err);
+				res.status(500).json({
+					status: "error",
+					message: "Failed to update user",
+					error: err.message,
+				});
+			});
 	}
 };
 
